@@ -33,12 +33,41 @@ npm install
 # Start the development server
 npm run dev
 
-project/
-├── public/             # Static assets
-├── src/                # Source code
-│   ├── components/     # React components
-│   ├── pages/          # Page views
-│   └── main.tsx        # App entry point
-├── index.html          # HTML template
-├── package.json        # Project metadata and dependencies
 
+
+
+project
+├── dist
+│   ├── assets
+│   │   ├── index-COSNbX4n.css
+│   │   ├── index-DUy0iAL9.js
+│   │   ├── orbitron-latin-400-normal-adG0u2mc.woff
+│   │   ├── orbitron-latin-400-normal-DQ4sj_VW.woff2
+│   │   ├── oxanium-latin-400-normal-B0I6Dx1w.woff
+│   │   ├── oxanium-latin-400-normal-DEjqMClP.woff2
+│   │   ├── oxanium-latin-ext-400-normal-DNFQBYfe.woff2
+│   │   └── oxanium-latin-ext-400-normal-DNSdSAlM.woff
+│   └── index.html
+├── eslint.config.js
+├── index.html
+├── package.json
+├── package-lock.json
+├── postcss.config.js
+├── src
+│   ├── App.tsx
+│   ├── components
+│   │   ├── AddTaskForm.tsx
+│   │   ├── ExecutionLog.tsx
+│   │   ├── Metrics.tsx
+│   │   └── TaskList.tsx
+│   ├── hooks
+│   │   └── useScheduler.ts
+│   ├── index.css
+│   ├── main.tsx
+│   ├── types.ts
+│   └── vite-env.d.ts
+├── tailwind.config.js
+├── tsconfig.app.json
+├── tsconfig.json
+├── tsconfig.node.json
+└── vite.config.ts
