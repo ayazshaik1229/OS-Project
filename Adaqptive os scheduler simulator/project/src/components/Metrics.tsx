@@ -1,16 +1,73 @@
 import React from 'react';
-import { SystemMetrics } from '../types';
-import { Cpu, CheckCircle2, AlertTriangle, Clock, Play, Pause } from 'lucide-react';
+import { SystemMetrics, SchedulingAlgorithm } from '../types';
+import { Cpu, CheckCircle2, AlertTriangle, Clock, Play, Pause, Layers, Timer } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface MetricsProps {
   metrics: SystemMetrics;
   onToggleScheduler: () => void;
+  onChangeAlgorithm?: (algorithm: SchedulingAlgorithm) => void;
+  onChangeTimeSlice?: (timeSlice: number) => void;
 }
 
-export function Metrics({ metrics, onToggleScheduler }: MetricsProps) {
+const algorithmOptions: { value: SchedulingAlgorithm; label: string }[] = [
+  { value: 'round-robin', label: 'Round Robin' },
+  { value: 'fcfs', label: 'First Come First Serve' },
+  { value: 'sjf-nonpreemptive', label: 'Shortest Job First (Non-preemptive)' },
+  { value: 'sjf-preemptive', label: 'Shortest Job First (Preemptive)' },
+];
+
+export function Metrics({ metrics, onToggleScheduler, onChangeAlgorithm, onChangeTimeSlice }: MetricsProps) {
   return (
-    <div className="grid grid-cols-5 gap-4">
+    <div className="grid grid-cols-7 gap-4">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="glassmorphism rounded-lg p-4 col-span-2"
+      >
+        <div className="flex items-center space-x-2">
+          <Layers className="text-purple-400 animate-pulse-slow" />
+          <h3 className="font-orbitron text-purple-400">Scheduling Algorithm</h3>
+        </div>
+        <select
+          className="mt-2 w-full bg-transparent border border-purple-400 rounded-lg p-2 text-white font-orbitron text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all duration-300 hover:border-purple-300"
+          value={metrics.currentAlgorithm}
+          onChange={(e) => onChangeAlgorithm?.(e.target.value as SchedulingAlgorithm)}
+        >
+          {algorithmOptions.map(option => (
+            <option key={option.value} value={option.value} className="bg-black">
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </motion.div>
+
+      {metrics.currentAlgorithm === 'round-robin' && (
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="glassmorphism rounded-lg p-4"
+        >
+          <div className="flex items-center space-x-2">
+            <Timer className="text-yellow-400 animate-pulse-slow" />
+            <h3 className="font-orbitron text-yellow-400">Time Slice</h3>
+          </div>
+          <div className="mt-2 flex items-center space-x-2">
+            <input
+              type="number"
+              min="1"
+              max="10"
+              value={metrics.timeSlice ? metrics.timeSlice / 1000 : 2}
+              onChange={(e) => onChangeTimeSlice?.(Number(e.target.value) * 1000)}
+              className="w-full bg-transparent border border-yellow-400 rounded-lg p-2 text-white font-orbitron text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all duration-300 hover:border-yellow-300"
+            />
+            <span className="text-yellow-400 font-orbitron text-sm">sec</span>
+          </div>
+        </motion.div>
+      )}
+
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
