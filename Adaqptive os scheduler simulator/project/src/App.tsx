@@ -7,7 +7,16 @@ import { ExecutionLog } from './components/ExecutionLog';
 import { motion } from 'framer-motion';
 
 function App() {
-  const { tasks, metrics, logs, addTask, removeTask, toggleScheduler } = useScheduler();
+  const { 
+    tasks, 
+    metrics, 
+    logs, 
+    addTask, 
+    removeTask, 
+    toggleScheduler, 
+    changeAlgorithm,
+    changeTimeSlice 
+  } = useScheduler();
 
   return (
     <div className="min-h-screen bg-black text-white font-oxanium">
@@ -19,11 +28,16 @@ function App() {
           className="px-4 py-6 sm:px-0"
         >
           <h1 className="text-4xl font-orbitron font-bold text-neon-blue mb-8 neon-glow text-center">
-            Quantum OS Scheduler
+            Adaptive OS Scheduler
           </h1>
           
           <div className="space-y-8">
-            <Metrics metrics={metrics} onToggleScheduler={toggleScheduler} />
+            <Metrics 
+              metrics={metrics} 
+              onToggleScheduler={toggleScheduler}
+              onChangeAlgorithm={changeAlgorithm}
+              onChangeTimeSlice={changeTimeSlice}
+            />
             
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}

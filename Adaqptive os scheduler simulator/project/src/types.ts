@@ -11,12 +11,20 @@ export interface Task {
   remainingTime?: number;
 }
 
+export type SchedulingAlgorithm = 
+  | 'round-robin'
+  | 'fcfs'
+  | 'sjf-nonpreemptive'
+  | 'sjf-preemptive';
+
 export interface SystemMetrics {
   cpuUtilization: number;
   completedTasks: number;
   missedDeadlines: number;
   averageWaitTime: number;
   isRunning: boolean;
+  currentAlgorithm: SchedulingAlgorithm;
+  timeSlice: number; // in milliseconds
 }
 
 export interface LogEntry {
