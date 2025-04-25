@@ -1,0 +1,121 @@
+@import '@fontsource/orbitron';
+@import '@fontsource/oxanium';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --neon-blue: #00f3ff;
+  --neon-green: #00ff9d;
+}
+
+body {
+  background-color: #000;
+  font-family: 'Oxanium', sans-serif;
+}
+
+.orbitron {
+  font-family: 'Orbitron', sans-serif;
+}
+
+.glassmorphism {
+  background: rgba(13, 17, 23, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 243, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 243, 255, 0.1);
+}
+
+.neon-glow {
+  text-shadow: 0 0 10px var(--neon-blue),
+               0 0 20px var(--neon-blue),
+               0 0 30px var(--neon-blue);
+}
+
+.neon-border {
+  box-shadow: 0 0 10px var(--neon-blue),
+              inset 0 0 10px var(--neon-blue);
+}
+
+.progress-bar {
+  background: linear-gradient(90deg, 
+    rgba(0, 243, 255, 0.2),
+    rgba(0, 255, 157, 0.2)
+  );
+}
+
+.progress-bar-fill {
+  background: linear-gradient(90deg,
+    var(--neon-blue),
+    var(--neon-green)
+  );
+  box-shadow: 0 0 15px var(--neon-blue);
+}
+
+.cyber-button {
+  position: relative;
+  background: linear-gradient(45deg, #000, #111);
+  border: 1px solid var(--neon-blue);
+  color: var(--neon-blue);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  transition: all 0.3s ease;
+}
+
+.cyber-button:hover {
+  background: linear-gradient(45deg, rgba(0, 243, 255, 0.1), rgba(0, 255, 157, 0.1));
+  box-shadow: 0 0 20px var(--neon-blue);
+  transform: translateY(-2px);
+}
+
+.cyber-button:active {
+  transform: translateY(0);
+}
+
+.cyber-input {
+  background: rgba(13, 17, 23, 0.7);
+  border: 1px solid var(--neon-blue);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.cyber-input:focus {
+  box-shadow: 0 0 15px var(--neon-blue);
+  border-color: var(--neon-green);
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+.terminal-text {
+  font-family: 'Oxanium', monospace;
+  color: var(--neon-green);
+}
+
+.task-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.task-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+.task-exit {
+  opacity: 1;
+}
+
+.task-exit-active {
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 300ms, transform 300ms;
+}
