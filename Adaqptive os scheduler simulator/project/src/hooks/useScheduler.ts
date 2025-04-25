@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Task, LogEntry } from '../types';
+import { Task, LogEntry, SchedulingAlgorithm } from '../types';
 
 const TICK_INTERVAL = 100; // 100ms per tick for smoother updates
-const TIME_SLICE = 2000; // 2 seconds for round-robin time slice
+const DEFAULT_TIME_SLICE = 2000; // 2 seconds default for round-robin
 
 export function useScheduler() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [isRunning, setIsRunning] = useState(true);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [currentAlgorithm, setCurrentAlgorithm] = useState<SchedulingAlgorithm>('round-robin');
+  const [timeSlice, setTimeSlice] = useState(DEFAULT_TIME_SLICE);
   const schedulerLock = useRef(false);
   const [metrics, setMetrics] = useState({
     cpuUtilization: 0,
@@ -16,6 +18,8 @@ export function useScheduler() {
     missedDeadlines: 0,
     averageWaitTime: 0,
     isRunning: true,
+    currentAlgorithm: 'round-robin' as SchedulingAlgorithm,
+    timeSlice: DEFAULT_TIME_SLICE,
   });
 
   // Logging function
@@ -27,6 +31,13 @@ export function useScheduler() {
     }].slice(-50)); // Keep last 50 logs
   }, []);
 
+  // Change time slice
+  const changeTimeSlice = useCallback((newTimeSlice: number) => {
+    setTimeSlice(newTimeSlice);
+    setMetrics(prev => ({ ...prev, timeSlice: newTimeSlice }));
+    addLog(`Time slice updated to ${newTimeSlice / 1000} seconds`, 'info');
+  }, [addLog]);
+
   // Add new task
   const addTask = useCallback((task: Omit<Task, 'id' | 'status' | 'progress'>) => {
     const newTask: Task = {
@@ -34,6 +45,7 @@ export function useScheduler() {
       status: 'ready',
       progress: 0,
       remainingTime: task.executionTime,
+      startTime: Date.now(), // Add arrival time for FCFS
       ...task,
     };
     setTasks(prev => [...prev, newTask]);
@@ -51,6 +63,18 @@ export function useScheduler() {
     });
   }, [addLog]);
 
+  // Change scheduling algorithm
+  const changeAlgorithm = useCallback((algorithm: SchedulingAlgorithm) => {
+    setCurrentAlgorithm(algorithm);
+    addLog(`Switched to ${algorithm.toUpperCase()} scheduling algorithm`, 'info');
+    setMetrics(prev => ({ ...prev, currentAlgorithm: algorithm }));
+    
+    // Reset all running tasks to ready when switching algorithms
+    setTasks(prev => prev.map(task => 
+      task.status === 'running' ? { ...task, status: 'ready' } : task
+    ));
+  }, [addLog]);
+
   // Start/Stop scheduler
   const toggleScheduler = useCallback(() => {
     setIsRunning(prev => {
@@ -60,40 +84,81 @@ export function useScheduler() {
     });
   }, [addLog]);
 
-  // Update task priorities based on deadlines and progress
-  const updatePriorities = useCallback((currentTasks: Task[]) => {
-    return currentTasks.map(task => {
-      if (task.status === 'ready' || task.status === 'running') {
-        const timeToDeadline = task.deadline - (Date.now() - (task.startTime || Date.now()));
-        const urgencyFactor = Math.max(1, 10 * (1 - timeToDeadline / task.deadline));
-        const newPriority = Math.min(10, Math.floor(task.priority * urgencyFactor));
-        
-        return {
-          ...task,
-          priority: newPriority,
-        };
-      }
-      return task;
-    });
+  // FCFS Scheduling - Select the task that arrived first
+  const scheduleFCFS = useCallback((tasks: Task[]) => {
+    const runningTask = tasks.find(t => t.status === 'running');
+    if (runningTask) return runningTask;
+
+    const readyTasks = tasks.filter(t => t.status === 'ready');
+    if (readyTasks.length === 0) return null;
+
+    // Sort by arrival time (startTime) and return the earliest
+    return readyTasks.sort((a, b) => (a.startTime || 0) - (b.startTime || 0))[0];
   }, []);
 
-  // Round-robin scheduling
-  const scheduleNextTask = useCallback((tasks: Task[]) => {
+  // SJF Non-preemptive Scheduling - Once a task starts, it runs to completion
+  const scheduleSJFNonPreemptive = useCallback((tasks: Task[]) => {
+    const runningTask = tasks.find(t => t.status === 'running');
+    if (runningTask) return runningTask;
+
+    const readyTasks = tasks.filter(t => t.status === 'ready');
+    if (readyTasks.length === 0) return null;
+
+    // Sort by execution time and return the shortest
+    return readyTasks.sort((a, b) => a.executionTime - b.executionTime)[0];
+  }, []);
+
+  // SJF Preemptive Scheduling - Can preempt if a shorter task arrives
+  const scheduleSJFPreemptive = useCallback((tasks: Task[]) => {
+    const readyOrRunningTasks = tasks.filter(t => 
+      t.status === 'ready' || t.status === 'running'
+    );
+    if (readyOrRunningTasks.length === 0) return null;
+
+    // Sort by remaining time and return the shortest
+    return readyOrRunningTasks.sort((a, b) => 
+      (a.remainingTime || a.executionTime) - (b.remainingTime || b.executionTime)
+    )[0];
+  }, []);
+
+  // Round-robin scheduling - Give each task a time slice
+  const scheduleRoundRobin = useCallback((tasks: Task[]) => {
     const runningTask = tasks.find(t => t.status === 'running');
     if (runningTask) {
-      // Check if current task's time slice is expired
       const timeInExecution = Date.now() - (runningTask.startTime || Date.now());
-      if (timeInExecution >= TIME_SLICE) {
-        return {
-          ...runningTask,
-          status: 'ready' as const,
-          remainingTime: runningTask.remainingTime,
-        };
+      if (timeInExecution >= timeSlice) {
+        // Time slice expired, move to next task
+        const readyTasks = tasks.filter(t => t.status === 'ready');
+        if (readyTasks.length > 0) {
+          return {
+            ...runningTask,
+            status: 'ready' as const,
+            remainingTime: runningTask.remainingTime,
+          };
+        }
       }
       return runningTask;
     }
-    return null;
-  }, []);
+
+    // Find next ready task
+    const readyTasks = tasks.filter(t => t.status === 'ready');
+    return readyTasks[0] || null;
+  }, [timeSlice]);
+
+  // Select scheduling algorithm
+  const selectSchedulingAlgorithm = useCallback((tasks: Task[]) => {
+    switch (currentAlgorithm) {
+      case 'fcfs':
+        return scheduleFCFS(tasks);
+      case 'sjf-nonpreemptive':
+        return scheduleSJFNonPreemptive(tasks);
+      case 'sjf-preemptive':
+        return scheduleSJFPreemptive(tasks);
+      case 'round-robin':
+      default:
+        return scheduleRoundRobin(tasks);
+    }
+  }, [currentAlgorithm, scheduleFCFS, scheduleSJFNonPreemptive, scheduleSJFPreemptive, scheduleRoundRobin]);
 
   // Scheduler tick
   useEffect(() => {
@@ -104,11 +169,8 @@ export function useScheduler() {
       setCurrentTime(Date.now());
       
       setTasks(prevTasks => {
-        // Update priorities
-        const tasksWithUpdatedPriorities = updatePriorities(prevTasks);
-        
-        // Sort by priority (highest first)
-        const sortedTasks = [...tasksWithUpdatedPriorities].sort((a, b) => b.priority - a.priority);
+        let sortedTasks = [...prevTasks];
+        const nextTask = selectSchedulingAlgorithm(sortedTasks);
         
         return sortedTasks.map(task => {
           if (task.status === 'completed' || task.status === 'missed' || task.status === 'paused') {
@@ -116,7 +178,6 @@ export function useScheduler() {
           }
 
           const elapsed = Date.now() - (task.startTime || Date.now());
-          const nextTask = scheduleNextTask(sortedTasks);
           
           // Check for missed deadline
           if (elapsed > task.deadline) {
@@ -136,7 +197,7 @@ export function useScheduler() {
             
             // If this task needs to yield to next task
             if (nextTask && nextTask.id !== task.id) {
-              addLog(`Task ${task.name} yielded to next task`, 'info');
+              addLog(`Task ${task.name} yielded to ${nextTask.name}`, 'info');
               return { 
                 ...task, 
                 status: 'ready',
@@ -148,8 +209,8 @@ export function useScheduler() {
             return { ...task, progress: newProgress, remainingTime };
           }
 
-          // Start new task if none is running
-          if (task.status === 'ready' && !sortedTasks.some(t => t.status === 'running')) {
+          // Start new task if it's selected by the scheduler
+          if (task.status === 'ready' && nextTask?.id === task.id) {
             addLog(`Starting task: ${task.name}`, 'info');
             return { 
               ...task, 
@@ -181,6 +242,8 @@ export function useScheduler() {
             return acc;
           }, 0) / Math.max(1, tasks.length),
           isRunning,
+          currentAlgorithm,
+          timeSlice,
         };
       });
 
@@ -188,7 +251,7 @@ export function useScheduler() {
     }, TICK_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [tasks, isRunning, updatePriorities, scheduleNextTask, addLog]);
+  }, [tasks, isRunning, currentAlgorithm, timeSlice, selectSchedulingAlgorithm, addLog]);
 
   return {
     tasks,
@@ -198,5 +261,7 @@ export function useScheduler() {
     removeTask,
     toggleScheduler,
     currentTime,
+    changeAlgorithm,
+    changeTimeSlice,
   };
 }
